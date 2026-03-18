@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1a0055">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="IPTV Besto">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>IPTV Besto</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+:root { --bg: #06060f; --card: #0d0030; --border: #330066; --text: #eeddff; --muted: #9977bb; --accent: #aa66ff; --purple: #7700ff; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
+body { display: flex; flex-direction: column; min-height: 100dvh; }
+
+.header {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 18px 20px 14px;
+  text-align: center;
+  flex-shrink: 0;
+  /* safe area for notch */
+  padding-top: calc(18px + env(safe-area-inset-top));
+}
+.logo-row { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 4px; }
+.play-ico {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 1.5px solid rgba(153,85,255,0.6);
+  background: rgba(102,0,255,0.2);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.play-ico::after {
+  content: ''; width: 0; height: 0; border-style: solid;
+  border-width: 7px 0 7px 13px;
+  border-color: transparent transparent transparent #cc88ff;
+  margin-left: 3px;
+}
+.brand { font-size: 22px; font-weight: 700; letter-spacing: 0.1em; color: #fff; }
+.brand span { color: var(--accent); }
+.tagline { font-size: 11px; color: #7755aa; letter-spacing: 0.05em; }
+
+.scroll { flex: 1; overflow-y: auto; padding: 20px 16px; display: flex; flex-direction: column; gap: 16px;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.field input, .field select {
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  color: var(--text); font-size: 15px; padding: 13px 14px;
+  outline: none; width: 100%; appearance: none; -webkit-appearance: none;
+}
+.field input { font-family: 'Courier New', monospace; }
+.field input:focus, .field select:focus { border-color: var(--purple); }
+
+.parsed-box {
+  background: #0a0020; border: 1px solid #220044; border-radius: 10px;
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 6px;
+}
+.parsed-title { font-size: 11px; color: #6644aa; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+.parsed-row-item { display: flex; gap: 10px; align-items: flex-start; }
+.parsed-key { font-size: 11px; color: #7755aa; min-width: 68px; flex-shrink: 0; padding-top: 1px; }
+.parsed-val { font-size: 12px; font-family: 'Courier New', monospace; color: #cc99ff; word-break: break-all; line-height: 1.5; }
+.parsed-val.empty { color: #553344; font-style: italic; }
+
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.divider { height: 1px; background: linear-gradient(90deg, transparent, #330066, transparent); margin: 4px 0; }
+
+.gen-btn {
+  background: linear-gradient(135deg, #4400cc, #6600ff);
+  border: none; border-radius: 12px; color: #fff;
+  font-size: 16px; font-weight: 700; letter-spacing: 0.04em;
+  padding: 16px; cursor: pointer; width: 100%;
+  transition: opacity 0.15s, transform 0.1s;
+  touch-action: manipulation;
+}
+.gen-btn:active { transform: scale(0.97); opacity: 0.9; }
+.gen-btn:disabled { opacity: 0.4; }
+
+.status { font-size: 12px; text-align: center; padding: 10px; border-radius: 8px; display: none; }
+.status.error { background: rgba(80,0,0,0.5); border: 1px solid #660000; color: #ff8888; display: block; }
+.status.success { background: rgba(0,50,0,0.5); border: 1px solid #006600; color: #88ff88; display: block; }
+
+.footer { border-top: 1px solid #1a0040; padding: 10px; text-align: center; font-size: 11px; color: #443366; flex-shrink: 0; }
+.footer a { color: #6644aa; text-decoration: none; }
+
+/* Install banner */
+#install-banner {
+  display: none; background: #1a0055; border: 1px solid #5533aa;
+  border-radius: 10px; padding: 12px 14px; align-items: center; gap: 12px;
+}
+#install-banner.show { display: flex; }
+.install-text { flex: 1; font-size: 12px; color: #cc99ff; line-height: 1.4; }
+.install-btn { background: var(--purple); border: none; border-radius: 8px; color: #fff; font-size: 12px; font-weight: 700; padding: 8px 14px; cursor: pointer; flex-shrink: 0; }
+.dismiss-btn { background: none; border: none; color: #7755aa; font-size: 18px; cursor: pointer; padding: 0 4px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo-row">
+    <div class="play-ico"></div>
+    <div class="brand">IPTV <span>BESTO</span></div>
+  </div>
+  <div class="tagline">Subscription Card Generator</div>
+</div>
+
+<div class="scroll">
+
+  <div id="install-banner">
+    <div class="install-text">Add to your home screen for quick access!</div>
+    <button class="install-btn" id="install-btn">Install</button>
+    <button class="dismiss-btn" id="dismiss-btn">✕</button>
+  </div>
+
+  <div class="field">
+    <label>M3U URL</label>
+    <input id="m3u" type="url" placeholder="Paste your full M3U URL here..." autocomplete="off" autocorrect="off" spellcheck="false">
+  </div>
+
+  <div class="parsed-box">
+    <div class="parsed-title">Parsed from URL</div>
+    <div class="parsed-row-item"><span class="parsed-key">Username</span><span class="parsed-val empty" id="p-user">—</span></div>
+    <div class="parsed-row-item"><span class="parsed-key">Password</span><span class="parsed-val empty" id="p-pass">—</span></div>
+    <div class="parsed-row-item"><span class="parsed-key">Server</span><span class="parsed-val empty" id="p-server">—</span></div>
+  </div>
+
+  <div class="row2">
+    <div class="field">
+      <label>Connection #</label>
+      <input id="conn" type="text" value="1" inputmode="numeric">
+    </div>
+    <div class="field">
+      <label>Validity</label>
+      <select id="validity">
+        <option value="1 MONTH">1 Month</option>
+        <option value="3 MONTHS">3 Months</option>
+        <option value="6 MONTHS">6 Months</option>
+        <option value="12 MONTHS" selected>12 Months</option>
+        <option value="LIFETIME">Lifetime</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="status" id="status"></div>
+  <div class="divider"></div>
+  <button class="gen-btn" id="gen-btn">⬇ Generate PDF Card</button>
+
+</div>
+
+<div class="footer">
+  <a href="https://www.iptvbesto.com" target="_blank">www.iptvbesto.com</a>
+</div>
+
+<script>
+// ── Service Worker ─────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+
+// ── PWA Install prompt ─────────────────────────────────────
+var deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('install-banner').classList.add('show');
+});
+document.getElementById('install-btn').addEventListener('click', function() {
+  if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt = null; }
+  document.getElementById('install-banner').classList.remove('show');
+});
+document.getElementById('dismiss-btn').addEventListener('click', function() {
+  document.getElementById('install-banner').classList.remove('show');
+});
+
+// ── Events ─────────────────────────────────────────────────
+document.getElementById('m3u').addEventListener('input', parseM3U);
+document.getElementById('gen-btn').addEventListener('click', generate);
+
+// ── Parse ──────────────────────────────────────────────────
+function parseM3U() {
+  var raw = document.getElementById('m3u').value.trim();
+  function set(id, val) {
+    var el = document.getElementById(id);
+    el.textContent = val || '—';
+    el.className = 'parsed-val' + (val ? '' : ' empty');
+  }
+  if (!raw) { set('p-user',''); set('p-pass',''); set('p-server',''); return; }
+  try {
+    var u = new URL(raw);
+    set('p-user', u.searchParams.get('username'));
+    set('p-pass', u.searchParams.get('password'));
+    set('p-server', u.origin);
+  } catch(e) { set('p-user',''); set('p-pass',''); set('p-server',''); }
+}
+
+function getParsed() {
+  var raw = document.getElementById('m3u').value.trim();
+  if (!raw) return null;
+  try {
+    var u = new URL(raw);
+    return { username: u.searchParams.get('username')||'', password: u.searchParams.get('password')||'', server: u.origin, m3u: raw };
+  } catch(e) { return null; }
+}
+
+function showStatus(msg, type) {
+  var el = document.getElementById('status');
+  el.textContent = msg; el.className = 'status ' + type;
+  if (type === 'success') setTimeout(function(){ el.className = 'status'; }, 3000);
+}
+
+// ── Generate ───────────────────────────────────────────────
+function generate() {
+  var parsed = getParsed();
+  if (!parsed || !parsed.username) { showStatus('Please paste a valid M3U URL first.', 'error'); return; }
+  var conn = document.getElementById('conn').value || '1';
+  var validity = document.getElementById('validity').value;
+  var btn = document.getElementById('gen-btn');
+  btn.disabled = true; btn.textContent = 'Generating…';
+  try {
+    var pdf = buildPDF(parsed, conn, validity);
+    var blob = new Blob([pdf], { type: 'application/pdf' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'IPTV_' + parsed.username + '.pdf';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+    showStatus('✓ PDF downloaded!', 'success');
+  } catch(e) { showStatus('Error: ' + e.message, 'error'); console.error(e); }
+  btn.disabled = false; btn.textContent = '⬇ Generate PDF Card';
+}
+
+// ── Canvas PDF builder ─────────────────────────────────────
+function buildPDF(parsed, conn, validity) {
+  var canvas = document.createElement('canvas');
+  var PW = 595, PH = 842, S = 2;
+  canvas.width = PW*S; canvas.height = PH*S;
+  var ctx = canvas.getContext('2d');
+  var W = PW*S, H = PH*S;
+
+  ctx.fillStyle = '#06060f'; ctx.fillRect(0,0,W,H);
+
+  [
+    [W*0.12,H*0.82,260,'rgba(85,0,238,'],
+    [W*0.88,H*0.70,220,'rgba(0,68,221,'],
+    [W*0.50,H*0.35,300,'rgba(136,0,204,'],
+    [W*0.08,H*0.18,180,'rgba(0,102,255,'],
+    [W*0.92,H*0.12,190,'rgba(204,0,255,'],
+  ].forEach(function(o){
+    var g=ctx.createRadialGradient(o[0],o[1],0,o[0],o[1],o[2]);
+    g.addColorStop(0,o[3]+'0.35)'); g.addColorStop(1,o[3]+'0)');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  });
+
+  ctx.strokeStyle='rgba(102,102,204,0.06)'; ctx.lineWidth=0.8;
+  for(var x=0;x<W;x+=60){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(var y=0;y<H;y+=60){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  ctx.strokeStyle='#4411cc'; ctx.lineWidth=3;
+  rr(ctx,20*S,20*S,(PW-40)*S,(PH-40)*S,12*S,false,true);
+  ctx.strokeStyle='#aa55ff'; ctx.lineWidth=5;
+  var ac=30*S,mg=20*S;
+  [[mg,mg,1,1],[W-mg,mg,-1,1],[mg,H-mg,1,-1],[W-mg,H-mg,-1,-1]].forEach(function(c){
+    ctx.beginPath();ctx.moveTo(c[0],c[1]);ctx.lineTo(c[0]+c[2]*ac,c[1]);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(c[0],c[1]);ctx.lineTo(c[0],c[1]+c[3]*ac);ctx.stroke();
+  });
+
+  ctx.beginPath();ctx.arc(W/2,82*S,34*S,0,Math.PI*2);
+  ctx.fillStyle='rgba(102,0,255,0.2)';ctx.fill();
+  ctx.strokeStyle='rgba(153,85,255,0.6)';ctx.lineWidth=3;ctx.stroke();
+  ctx.beginPath();ctx.moveTo(W/2-9*S,82*S-12*S);ctx.lineTo(W/2-9*S,82*S+12*S);ctx.lineTo(W/2+15*S,82*S);ctx.closePath();
+  ctx.fillStyle='#cc88ff';ctx.fill();
+
+  ctx.textAlign='center';
+  ctx.fillStyle='#ffffff';ctx.font='bold '+(34*S)+'px Arial,sans-serif';ctx.fillText('IPTV PREMIUM',W/2,148*S);
+  ctx.fillStyle='#8866cc';ctx.font=(11*S)+'px Arial,sans-serif';ctx.fillText('\u2666   '+validity+' SUBSCRIPTION   \u2666',W/2,166*S);
+
+  ctx.fillStyle='rgba(102,0,255,0.15)';rr(ctx,W/2-80*S,170*S,160*S,20*S,10*S,true,false);
+  ctx.strokeStyle='rgba(153,85,255,0.4)';ctx.lineWidth=1.5;rr(ctx,W/2-80*S,170*S,160*S,20*S,10*S,false,true);
+  ctx.fillStyle='#bb88ff';ctx.font=(9*S)+'px Arial,sans-serif';ctx.fillText('www.iptvbesto.com',W/2,184*S);
+
+  var dg=ctx.createLinearGradient(60*S,0,W-60*S,0);
+  dg.addColorStop(0,'rgba(102,0,255,0)');dg.addColorStop(0.5,'rgba(102,0,255,0.6)');dg.addColorStop(1,'rgba(102,0,255,0)');
+  ctx.strokeStyle=dg;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(60*S,194*S);ctx.lineTo(W-60*S,194*S);ctx.stroke();
+
+  [[W*0.27,'CONNECTION '+conn],[W*0.73,'ACTIVE']].forEach(function(p){
+    ctx.fillStyle='#1a0055';rr(ctx,p[0]-75*S,200*S,150*S,24*S,7*S,true,false);
+    ctx.strokeStyle='#5533aa';ctx.lineWidth=2;rr(ctx,p[0]-75*S,200*S,150*S,24*S,7*S,false,true);
+    ctx.fillStyle='#cc99ff';ctx.font='bold '+(9*S)+'px Arial,sans-serif';ctx.fillText(p[1],p[0],216*S);
+  });
+
+  var rows=[['USERNAME',parsed.username],['PASSWORD',parsed.password],['SERVER URL',parsed.server],['M3U ACCESS URL',parsed.m3u]];
+  var ry=236*S,rh=40*S;
+  rows.forEach(function(row){
+    ctx.fillStyle='rgba(13,0,48,0.75)';rr(ctx,44*S,ry,(PW-88)*S,rh,6*S,true,false);
+    ctx.strokeStyle='#330066';ctx.lineWidth=1.5;rr(ctx,44*S,ry,(PW-88)*S,rh,6*S,false,true);
+    ctx.fillStyle='#7700ff';ctx.fillRect(44*S,ry,3*S,rh);
+    ctx.textAlign='left';ctx.fillStyle='#9977bb';ctx.font='bold '+(8*S)+'px Arial,sans-serif';ctx.fillText(row[0],56*S,ry+14*S);
+    ctx.fillStyle='#eeddff';var fs=9.5*S;ctx.font='bold '+fs+'px "Courier New",monospace';
+    while(ctx.measureText(row[1]).width>(PW-120)*S&&fs>6*S){fs-=0.5;ctx.font='bold '+fs+'px "Courier New",monospace';}
+    ctx.fillText(row[1],56*S,ry+30*S);ry+=44*S;
+  });
+
+  ctx.fillStyle='rgba(26,0,68,0.9)';rr(ctx,44*S,ry+4*S,(PW-88)*S,22*S,5*S,true,false);
+  ctx.strokeStyle='#5500cc';ctx.lineWidth=2;rr(ctx,44*S,ry+4*S,(PW-88)*S,22*S,5*S,false,true);
+  ctx.fillStyle='#aa77ff';ctx.textAlign='center';ctx.font='bold '+(8.5*S)+'px Arial,sans-serif';
+  ctx.fillText('\u25ba  SAMSUNG & LG TV \u2014 IPTV Smarters URLs',W/2,ry+19*S);ry+=28*S;
+
+  ['http://smart.dndnscloud.ru','http://line.ottcdn.net','http://line.dino.ws','http://line.dino-ott.ru','http://smart.cwdn.cx'].forEach(function(u){
+    ctx.fillStyle='rgba(10,0,40,0.7)';rr(ctx,44*S,ry,(PW-88)*S,22*S,4*S,true,false);
+    ctx.strokeStyle='#2a0055';ctx.lineWidth=1.2;rr(ctx,44*S,ry,(PW-88)*S,22*S,4*S,false,true);
+    ctx.fillStyle='#4400aa';ctx.fillRect(44*S,ry,3*S,22*S);
+    ctx.fillStyle='#cc99ff';ctx.textAlign='left';ctx.font=(9*S)+'px "Courier New",monospace';ctx.fillText(u,54*S,ry+15*S);ry+=26*S;
+  });
+
+  ry+=4*S;
+  ctx.fillStyle='rgba(20,8,0,0.85)';rr(ctx,44*S,ry,(PW-88)*S,50*S,6*S,true,false);
+  ctx.strokeStyle='#aa4400';ctx.lineWidth=2;rr(ctx,44*S,ry,(PW-88)*S,50*S,6*S,false,true);
+  ctx.fillStyle='#ff6600';ctx.fillRect(44*S,ry,3*S,50*S);
+  ctx.textAlign='left';ctx.fillStyle='#ff8833';ctx.font='bold '+(8*S)+'px Arial,sans-serif';ctx.fillText('\u26a0  IMPORTANT NOTICE',56*S,ry+14*S);
+  ctx.fillStyle='#cc9966';ctx.font=(8*S)+'px Arial,sans-serif';ctx.fillText('If we did not respond within 24 hours, please visit',56*S,ry+27*S);
+  ctx.fillStyle='#ff8833';ctx.font='bold '+(8*S)+'px Arial,sans-serif';ctx.fillText('www.iptvbesto.com',56*S,ry+40*S);
+  ctx.fillStyle='#cc9966';ctx.font=(8*S)+'px Arial,sans-serif';
+  ctx.fillText('to check for updated contact numbers.',56*S+ctx.measureText('www.iptvbesto.com  ').width,ry+40*S);
+  ry+=58*S;
+
+  ry+=4*S;
+  ctx.fillStyle='rgba(17,0,64,0.8)';rr(ctx,44*S,ry,(PW-88)*S,48*S,7*S,true,false);
+  ctx.strokeStyle='#4422aa';ctx.lineWidth=2;rr(ctx,44*S,ry,(PW-88)*S,48*S,7*S,false,true);
+  ctx.fillStyle='#cc99ff';ctx.textAlign='center';ctx.font='bold '+(10*S)+'px Arial,sans-serif';
+  ctx.fillText('\u23f1  VALIDITY: '+validity+'  |  PREMIUM PLAN',W/2,ry+20*S);
+  ctx.fillStyle='#7766aa';ctx.font=(8*S)+'px Arial,sans-serif';ctx.fillText('HD / FHD / 4K  \u2022  EPG Guide  \u2022  VOD Included',W/2,ry+34*S);
+  ctx.strokeStyle='#4411bb';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(44*S,ry+52*S);ctx.lineTo((PW-44)*S,ry+52*S);ctx.stroke();
+  ctx.fillStyle='#6644aa';ctx.font=(8.5*S)+'px Arial,sans-serif';ctx.fillText('www.iptvbesto.com',W/2,ry+64*S);
+  ctx.fillStyle='#554477';ctx.font=(7.5*S)+'px Arial,sans-serif';ctx.fillText('CONFIDENTIAL \u2014 Keep your credentials private. Do not share.',W/2,ry+78*S);
+
+  return jpegToPDF(canvas.toDataURL('image/jpeg',0.93), PW, PH);
+}
+
+function rr(ctx,x,y,w,h,r,fill,stroke){
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath();
+  if(fill)ctx.fill();if(stroke)ctx.stroke();
+}
+
+function jpegToPDF(dataUrl, pw, ph) {
+  var raw = atob(dataUrl.split(',')[1]);
+  var imgLen = raw.length;
+  var parts = [], xref = [], pos = 0;
+  var enc = new TextEncoder();
+  function ws(s){ parts.push({t:'s',d:s}); pos+=enc.encode(s).length; }
+  function wb(s){ parts.push({t:'b',d:s}); pos+=s.length; }
+  function mark(n){ xref[n]=pos; }
+
+  ws('%PDF-1.4\n%\xFF\xFF\n');
+  mark(1); ws('1 0 obj\n<</Type/Catalog/Pages 2 0 R>>\nendobj\n');
+  mark(2); ws('2 0 obj\n<</Type/Pages/Kids[3 0 R]/Count 1>>\nendobj\n');
+  mark(3); ws('3 0 obj\n<</Type/Page/Parent 2 0 R/MediaBox[0 0 '+pw+' '+ph+']/Contents 4 0 R/Resources<</XObject<</Im1 5 0 R>>>>>>\nendobj\n');
+  var cs='q '+pw+' 0 0 '+ph+' 0 0 cm /Im1 Do Q';
+  mark(4); ws('4 0 obj\n<</Length '+cs.length+'>>\nstream\n'+cs+'\nendstream\nendobj\n');
+  mark(5); ws('5 0 obj\n<</Type/XObject/Subtype/Image/Width '+(pw*2)+'/Height '+(ph*2)+'/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter/DCTDecode/Length '+imgLen+'>>\nstream\n');
+  wb(raw); ws('\nendstream\nendobj\n');
+
+  var xp=pos, xs='xref\n0 6\n0000000000 65535 f \n';
+  for(var i=1;i<=5;i++) xs+=String(xref[i]).padStart(10,'0')+' 00000 n \n';
+  xs+='trailer\n<</Size 6/Root 1 0 R>>\nstartxref\n'+xp+'\n%%EOF\n';
+  ws(xs);
+
+  var total=0;
+  parts.forEach(function(p){total+=p.t==='s'?enc.encode(p.d).length:p.d.length;});
+  var out=new Uint8Array(total), off=0;
+  parts.forEach(function(p){
+    if(p.t==='s'){var e=enc.encode(p.d);out.set(e,off);off+=e.length;}
+    else{for(var i=0;i<p.d.length;i++)out[off+i]=p.d.charCodeAt(i);off+=p.d.length;}
+  });
+  return out;
+}
+</script>
+</body>
+</html>
